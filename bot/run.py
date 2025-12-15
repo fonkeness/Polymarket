@@ -19,7 +19,7 @@ def main():
     # Обработка inline-кнопок
     app.add_handler(CallbackQueryHandler(menu_callback))
 
-    print("Бот запущен...")
+    print("Бот запущен..")
     app.run_polling()
 
 

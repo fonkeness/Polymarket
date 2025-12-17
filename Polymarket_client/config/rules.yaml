@@ -6,3 +6,4 @@ buy_alert:
 sell_alert:
   enabled: true
   min_total_notional: 15000
+

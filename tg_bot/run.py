@@ -1,9 +1,9 @@
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters
 
-from bot.services.db import init_db, set_role
-from bot.config.settings import TOKEN, ADMIN_ID
-from bot.handlers.auth.auth_handler import start, handle_password
-from bot.handlers.menu.callbacks import menu_callback
+from tg_bot.services.db import init_db, set_role
+from tg_bot.config.settings import TOKEN, ADMIN_ID
+from tg_bot.handlers.auth.auth_handler import start, handle_password
+from tg_bot.handlers.menu.callbacks import menu_callback
 
 
 def main():

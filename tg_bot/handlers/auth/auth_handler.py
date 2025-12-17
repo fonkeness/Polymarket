@@ -1,9 +1,9 @@
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ContextTypes
 
-from bot.services.db import is_authorized, authorize
-from bot.config.settings import PASSWORD
-from bot.handlers.menu.main_menu import build_main_menu
+from tg_bot.services.db import is_authorized, authorize
+from tg_bot.config.settings import PASSWORD
+from tg_bot.handlers.menu.main_menu import build_main_menu
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):

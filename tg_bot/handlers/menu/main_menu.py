@@ -1,6 +1,6 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from bot.services.db import is_authorized, get_all_users, set_role
-from bot.config.settings import ADMIN_ID
+from tg_bot.services.db import is_authorized, get_all_users, set_role
+from tg_bot.config.settings import ADMIN_ID
 
 def build_main_menu(user_id: int):
     keyboard = [

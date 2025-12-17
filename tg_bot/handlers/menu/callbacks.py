@@ -1,7 +1,7 @@
 from telegram import Update
 from telegram.ext import ContextTypes
-from bot.services.db import get_all_users
-from bot.config.settings import ADMIN_ID
+from tg_bot.services.db import get_all_users
+from tg_bot.config.settings import ADMIN_ID
 
 
 async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):

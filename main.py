@@ -1,4 +1,4 @@
-from bot.run import main
+from tg_bot.run import main
 
 if __name__ == "__main__":
     main()

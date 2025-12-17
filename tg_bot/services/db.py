@@ -1,7 +1,7 @@
 import sqlite3
 from pathlib import Path
 
-DB_PATH = Path("bot.db")
+DB_PATH = Path("tg_bot.db")
 
 
 def init_db():

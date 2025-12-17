@@ -68,7 +68,7 @@ def save_raw_trade(trade: Dict[str, Any]) -> None:
         conn.close()
 
 
-# ---- ручной тест ----
+
 if __name__ == "__main__":
     from datetime import datetime, timezone
 

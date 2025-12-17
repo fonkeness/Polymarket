@@ -1,0 +1,8 @@
+buy_alert:
+  enabled: true
+  min_total_notional: 10000
+  min_trades: 2
+
+sell_alert:
+  enabled: true
+  min_total_notional: 15000

@@ -1,0 +1,4 @@
+mode: whitelist
+
+whitelist:
+  - "TEST_TOKEN_ID"

@@ -1,1 +1,2 @@
 PyYAML
+psycopg2-binary

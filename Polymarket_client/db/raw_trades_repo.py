@@ -36,6 +36,7 @@ def save_raw_trade(trade: Dict[str, Any]) -> None:
             trade_id,
             wallet_address,
             token_id,
+            condition_id
             side,
             price,
             size,
@@ -43,20 +44,21 @@ def save_raw_trade(trade: Dict[str, Any]) -> None:
             trade_ts,
             source
         )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT (trade_id) DO NOTHING;
     """
 
     values = (
         trade["trade_id"],
-        trade.get("wallet_address", "TEST_WALLET"),
+        trade["wallet_address"],
         trade["token_id"],
+        trade.get("condition_id"),
         trade["side"],
         trade["price"],
         trade["size"],
         trade["notional"],
         trade["trade_ts"],
-        "test",
+        trade.get("source", "unknown"),
     )
 
     conn = get_connection()
@@ -68,7 +70,7 @@ def save_raw_trade(trade: Dict[str, Any]) -> None:
         conn.close()
 
 
-
+# ---- ручной тест ----
 if __name__ == "__main__":
     from datetime import datetime, timezone
 

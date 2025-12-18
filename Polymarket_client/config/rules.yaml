@@ -7,3 +7,11 @@ sell_alert:
   enabled: true
   min_total_notional: 15000
 
+user_state:
+  dormant_days: 30
+  active_trades_threshold: 50
+  statuses:
+    new: new
+    revived: revived
+    active: active
+    ignored: ignored

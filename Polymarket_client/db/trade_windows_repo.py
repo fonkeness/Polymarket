@@ -72,3 +72,22 @@ def upsert_window(
                 return float(total_notional), int(trade_count)
     finally:
         conn.close()
+def mark_window_alerted(wallet_address: str, condition_id: str, window_start_ts: datetime, window_minutes: int) -> int:
+    """
+    Ставит alerted_at только если его ещё не было.
+    Возвращает 1 если проставили (значит можно слать алерт), иначе 0.
+    """
+    sql = """
+    UPDATE trade_windows
+    SET alerted_at = now(), updated_at = now()
+    WHERE wallet_address=%s AND condition_id=%s AND window_start_ts=%s AND window_minutes=%s
+      AND alerted_at IS NULL;
+    """
+    conn = get_connection()
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, (wallet_address, condition_id, window_start_ts, window_minutes))
+                return cur.rowcount
+    finally:
+        conn.close()

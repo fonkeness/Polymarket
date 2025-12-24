@@ -2,9 +2,11 @@ import json
 import subprocess
 from datetime import datetime, timezone
 
-from db.raw_trades_repo import save_raw_trade
-from app.state.user_state_updater import update_user_state
-from app.bet_aggregation.window_aggregator import update_window_and_check_alert
+from Polymarket_client.db.raw_trades_repo import save_raw_trade
+from Polymarket_client.app.state.user_state_updater import update_user_state
+from Polymarket_client.app.bet_aggregation.window_aggregator import update_window_and_check_alert
+from Polymarket_client.db.trade_windows_repo import mark_window_alerted
+
 
 
 TRADES_URL = "https://data-api.polymarket.com/trades?limit=25&offset=0&takerOnly=true"
@@ -84,19 +86,26 @@ def main():
         )
 
         if win.get("is_candidate"):
-            print(
-                "ALERT_CANDIDATE",
+            updated = mark_window_alerted(
                 nt["wallet_address"],
                 nt["condition_id"],
-                "window_start",
-                win["window_start_ts"].isoformat(),
-                "total",
-                win["total_notional"],
-                "trades",
-                win["trade_count"],
-                "min_total",
-                win["min_total_notional"],
+                win["window_start_ts"],
+                win["window_minutes"],
             )
+            if updated == 1:
+                print(
+                    "ALERT_CANDIDATE",
+                    nt["wallet_address"],
+                    nt["condition_id"],
+                    "window_start",
+                    win["window_start_ts"].isoformat(),
+                    "total",
+                    win["total_notional"],
+                    "trades",
+                    win["trade_count"],
+                    "min_total",
+                    win["min_total_notional"],
+                )
 
     print("processed:", ok)
 

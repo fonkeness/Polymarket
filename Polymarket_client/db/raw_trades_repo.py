@@ -36,7 +36,7 @@ def save_raw_trade(trade: Dict[str, Any]) -> None:
             trade_id,
             wallet_address,
             token_id,
-            condition_id
+            condition_id,
             side,
             price,
             size,
@@ -78,6 +78,7 @@ if __name__ == "__main__":
         "trade_id": "test_trade_1",
         "wallet_address": "TEST_WALLET",
         "token_id": "TEST_TOKEN_ID",
+        "condition_id": "TEST_CONDITION_ID",
         "side": "BUY",
         "price": 0.62,
         "size": 10000.0,

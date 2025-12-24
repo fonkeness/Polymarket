@@ -15,3 +15,6 @@ user_state:
     revived: revived
     active: active
     ignored: ignored
+aggregation:
+  window_minutes: 5
+  min_total_notional: 10000

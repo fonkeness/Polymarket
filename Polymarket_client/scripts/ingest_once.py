@@ -2,10 +2,11 @@ import json
 import subprocess
 from datetime import datetime, timezone
 
-from Polymarket_client.db.raw_trades_repo import save_raw_trade
-from Polymarket_client.app.state.user_state_updater import update_user_state
-from Polymarket_client.app.bet_aggregation.window_aggregator import update_window_and_check_alert
-from Polymarket_client.db.trade_windows_repo import mark_window_alerted
+from db.raw_trades_repo import save_raw_trade
+from app.state.user_state_updater import update_user_state
+from app.bet_aggregation.window_aggregator import update_window_and_check_alert
+from db.trade_windows_repo import mark_window_alerted
+
 
 
 

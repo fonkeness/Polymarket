@@ -1,5 +1,4 @@
 import psycopg2
-from psycopg2.extras import execute_values
 from typing import Dict, Any
 from pathlib import Path
 import yaml
@@ -16,7 +15,6 @@ def load_settings() -> Dict[str, Any]:
         return yaml.safe_load(f)
 
 
-
 def get_connection():
     settings = load_settings()
     db = settings["database"]
@@ -30,7 +28,13 @@ def get_connection():
     )
 
 
-def save_raw_trade(trade: Dict[str, Any]) -> None:
+def save_raw_trade(trade: Dict[str, Any]) -> bool:
+    """
+    Пытается вставить raw trade в БД.
+    Возвращает:
+      True  — если вставили (это новый трейд для нашей БД)
+      False — если уже был (trade_id конфликтнул) и вставки не произошло
+    """
     sql = """
         INSERT INTO raw_trades (
             trade_id,
@@ -45,7 +49,8 @@ def save_raw_trade(trade: Dict[str, Any]) -> None:
             source
         )
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        ON CONFLICT (trade_id) DO NOTHING;
+        ON CONFLICT (trade_id) DO NOTHING
+        RETURNING trade_id;
     """
 
     values = (
@@ -66,6 +71,8 @@ def save_raw_trade(trade: Dict[str, Any]) -> None:
         with conn:
             with conn.cursor() as cur:
                 cur.execute(sql, values)
+                row = cur.fetchone()
+                return row is not None
     finally:
         conn.close()
 
@@ -84,7 +91,8 @@ if __name__ == "__main__":
         "size": 10000.0,
         "notional": 6200.0,
         "trade_ts": datetime(2024, 3, 9, 16, 0, tzinfo=timezone.utc),
+        "source": "test",
     }
 
-    save_raw_trade(test_trade)
-    print("Saved raw trade")
+    inserted = save_raw_trade(test_trade)
+    print("Inserted:", inserted)

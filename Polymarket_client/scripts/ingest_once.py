@@ -6,9 +6,13 @@ from db.raw_trades_repo import save_raw_trade
 from app.state.user_state_updater import update_user_state
 from app.bet_aggregation.window_aggregator import update_window_and_check_alert
 from db.trade_windows_repo import mark_window_alerted
+from app.rules_loader import load_rules
+from db.user_state_repo import get_user_state
+from app.alert_engine.alert_decider import should_alert
 
 
-
+status = update_user_state(nt)
+win = update_window_and_check_alert(nt)
 
 TRADES_URL = "https://data-api.polymarket.com/trades?limit=25&offset=0&takerOnly=true"
 
@@ -109,6 +113,39 @@ def main():
                 )
 
     print("processed:", ok)
+
+
+rules = load_rules()
+us = get_user_state(nt["wallet_address"]) or {}
+
+decision = should_alert(nt, us, win, rules)
+
+if decision.get("should_alert"):
+    updated = mark_window_alerted(
+        nt["wallet_address"],
+        nt["condition_id"],
+        win["window_start_ts"],
+        win["window_minutes"],
+    )
+    if updated == 1:
+        print(
+            "ALERT",
+            decision.get("alert_type"),
+            nt["wallet_address"],
+            nt["condition_id"],
+            "window_start",
+            win["window_start_ts"].isoformat(),
+            "total",
+            win["total_notional"],
+            "trades",
+            win["trade_count"],
+            "user_trades",
+            us.get("total_trades"),
+            "status",
+            us.get("status"),
+            "reason",
+            decision.get("reason"),
+        )
 
 
 if __name__ == "__main__":

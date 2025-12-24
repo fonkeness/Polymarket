@@ -18,3 +18,22 @@ user_state:
 aggregation:
   window_minutes: 5
   min_total_notional: 50
+
+alert_logic:
+  # считаем аккаунт "новым", если у него меньше N трейдов в нашей базе
+  new_user_max_trades: 20
+
+  # "проснулся", если не торговал больше N дней (используем last_trade_ts)
+  dormant_days: 30
+
+  # алертим только если окно >= этого порога
+  min_window_notional: 10000
+
+  # и/или если окно >= median * мультипликатор (если median есть)
+  min_vs_median_mult: 5
+
+  # минимальное число трейдов в окне, чтобы не ловить 1 микросделку
+  min_window_trades: 1
+
+  # отдельный алерт на SELL (пока просто флаг)
+  track_sells_separately: true

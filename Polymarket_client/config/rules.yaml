@@ -17,4 +17,4 @@ user_state:
     ignored: ignored
 aggregation:
   window_minutes: 5
-  min_total_notional: 10000
+  min_total_notional: 50

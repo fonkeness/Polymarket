@@ -1,6 +1,7 @@
 from telegram import Update
 from telegram.ext import ContextTypes
-from tg_bot.services.db import get_all_users
+
+from tg_bot.services.db import get_all_users, is_authorized
 from tg_bot.config.settings import ADMIN_ID
 
 
@@ -11,7 +12,11 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     action = query.data
 
-    # ---- Обычные кнопки меню ----
+    # защита от ручных callback-ов
+    if not is_authorized(user_id):
+        await query.edit_message_text("Сначала /start и авторизация.")
+        return
+
     if action == "markets":
         await query.edit_message_text("📈 Раздел рынков — скоро добавим функционал.")
 
@@ -21,7 +26,10 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif action == "settings":
         await query.edit_message_text("⚙ Настройки — будут позже.")
 
-    # ---- Админ-секция ----
+    elif action == "event_report":
+        context.user_data["waiting_for_event_url"] = True
+        await query.edit_message_text("Скинь ссылку на событие (формат: https://polymarket.com/event/...)")
+
     elif action == "admin_users":
         if user_id != ADMIN_ID:
             await query.edit_message_text("⛔ У вас нет прав.")
@@ -38,6 +46,5 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await query.edit_message_text(text, parse_mode="Markdown")
 
-    # ---- Неизвестная команда ----
     else:
         await query.edit_message_text("❓ Неизвестная команда.")

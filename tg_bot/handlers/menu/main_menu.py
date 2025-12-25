@@ -1,5 +1,4 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from tg_bot.services.db import is_authorized, get_all_users, set_role
 from tg_bot.config.settings import ADMIN_ID
 
 def build_main_menu(user_id: int):
@@ -7,6 +6,9 @@ def build_main_menu(user_id: int):
         [
             InlineKeyboardButton("📈 Мои рынки", callback_data="markets"),
             InlineKeyboardButton("🔔 Алёрты", callback_data="alerts")
+        ],
+        [
+            InlineKeyboardButton("📄 Отчёт по событию", callback_data="event_report")
         ],
         [
             InlineKeyboardButton("⚙ Настройки", callback_data="settings")

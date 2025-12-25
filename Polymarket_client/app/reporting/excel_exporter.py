@@ -1,25 +1,24 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, Tuple
+from typing import Dict
 
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font
 from openpyxl.utils import get_column_letter
 
 from app.ingestion.event_resolver import EventMeta
-from app.services.event_aggregator import EventReportData, MarketTotals, ParticipantTotals
+from app.services.event_aggregator import EventReportData, ParticipantTotals
 
 
 def _safe_sheet_title(title: str) -> str:
     t = (title or "").strip()
     if not t:
-        return "Sheet"
-    bad = ['\\', '/', '?', '*', '[', ']', ':']
-    for ch in bad:
+        return "Market"
+    for ch in ['\\', '/', '?', '*', '[', ']', ':']:
         t = t.replace(ch, " ")
+    t = " ".join(t.split())
     return t[:31]
 
 
@@ -34,31 +33,27 @@ def _ts_to_str(ts: int | None) -> str:
     return datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
 
-def export_event_report_xlsx(
-    *,
-    event: EventMeta,
-    report: EventReportData,
-    out_path: str,
-) -> str:
+def export_event_report_xlsx(*, event: EventMeta, report: EventReportData, out_path: str) -> str:
     wb = Workbook()
     bold = Font(bold=True)
 
-    # --- Summary ---
+    # =====================
+    # Summary sheet
+    # =====================
     ws = wb.active
     ws.title = "Summary"
 
-    ws["A1"], ws["B1"] = "Event slug", report.event_slug
-    ws["A2"], ws["B2"] = "Event title", report.event_title
-    ws["A3"], ws["B3"] = "Event id", report.event_id
-    ws["A4"], ws["B4"] = "As of (UTC)", report.as_of_utc
-    ws["A5"], ws["B5"] = "Total trades", report.total_trades
-    ws["A6"], ws["B6"] = "Unique traders", report.unique_traders
-    ws["A7"], ws["B7"] = "Total turnover (USD)", float(report.total_turnover_usd)
+    ws["A1"], ws["B1"] = "Event title", report.event_title
+    ws["A2"], ws["B2"] = "Event id", report.event_id
+    ws["A3"], ws["B3"] = "As of (UTC)", report.as_of_utc
+    ws["A4"], ws["B4"] = "Total trades", report.total_trades
+    ws["A5"], ws["B5"] = "Unique traders", report.unique_traders
+    ws["A6"], ws["B6"] = "Total turnover (USD)", float(report.total_turnover_usd)
 
-    for r in range(1, 8):
+    for r in range(1, 7):
         ws[f"A{r}"].font = bold
 
-    start_row = 9
+    start_row = 8
     headers = [
         "market_id",
         "conditionId",
@@ -73,6 +68,7 @@ def export_event_report_xlsx(
     for c, h in enumerate(headers, 1):
         cell = ws.cell(row=start_row, column=c, value=h)
         cell.font = bold
+        cell.alignment = Alignment(wrap_text=True, vertical="top")
 
     market_id_by_cid = {m.condition_id: m.market_id for m in event.markets}
 
@@ -90,19 +86,23 @@ def export_event_report_xlsx(
         ws.cell(row, 9, float(m.turnover_usd))
         row += 1
 
-    ws.freeze_panes = ws["A10"]
+    ws.freeze_panes = ws[f"A{start_row+1}"]
     ws.auto_filter.ref = f"A{start_row}:I{row-1}"
     _set_col_widths(ws, {1: 10, 2: 22, 3: 40, 4: 60, 5: 12, 6: 14, 7: 14, 8: 14, 9: 14})
 
-    # --- Per-market sheets ---
-    # группируем участников по conditionId
+    # =====================
+    # Per-market sheets
+    # =====================
     per_market: Dict[str, list[ParticipantTotals]] = {}
     for (cid, _wallet, _outcome), p in report.participants.items():
         per_market.setdefault(cid, []).append(p)
 
     for m in markets_sorted:
-        title = _safe_sheet_title(market_id_by_cid.get(m.condition_id) or m.market_slug or "market")
-        # защита от дублей имён листов
+        # имя листа = вопрос рынка (если пусто -> slug)
+        desired = m.question or m.market_slug or "Market"
+        title = _safe_sheet_title(desired)
+
+        # защита от дублей названий листов
         base = title
         k = 2
         while title in wb.sheetnames:
@@ -111,13 +111,13 @@ def export_event_report_xlsx(
 
         wsm = wb.create_sheet(title=title)
 
-        # шапка
-        wsm["A1"], wsm["B1"] = "market_slug", m.market_slug
-        wsm["A2"], wsm["B2"] = "conditionId", m.condition_id
-        wsm["A3"], wsm["B3"] = "question", m.question
+        wsm["A1"], wsm["B1"] = "question", m.question
+        wsm["A2"], wsm["B2"] = "market_slug", m.market_slug
+        wsm["A3"], wsm["B3"] = "conditionId", m.condition_id
         wsm["A4"], wsm["B4"] = "trades_count", m.trades_count
         wsm["A5"], wsm["B5"] = "unique_traders", len(m.unique_traders)
         wsm["A6"], wsm["B6"] = "turnover_usd", float(m.turnover_usd)
+
         for r in range(1, 7):
             wsm[f"A{r}"].font = bold
 
@@ -145,7 +145,6 @@ def export_event_report_xlsx(
             cell.alignment = Alignment(wrap_text=True, vertical="top")
 
         plist = per_market.get(m.condition_id, [])
-        # сортировка: по net_spent_usd убыв., потом turnover убыв.
         plist.sort(key=lambda p: (p.net_spent_usd, p.buy_usd + p.sell_usd), reverse=True)
 
         r = table_row + 1

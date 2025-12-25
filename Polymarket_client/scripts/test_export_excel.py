@@ -10,7 +10,9 @@ def main() -> None:
     EVENT_URL = "https://polymarket.com/event/fed-decision-in-january"
     ev = resolve_event(EVENT_URL)
 
-    as_of = datetime.now(tz=timezone.utc).isoformat()
+    # без миллисекунд и без +00:00
+    as_of = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+
     report = aggregate_event(
         ev,
         iter_event_trades(ev.event_id, limit=1000, taker_only=False),

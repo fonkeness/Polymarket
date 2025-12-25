@@ -7,7 +7,7 @@ from app.reporting.excel_exporter import export_event_report_xlsx
 
 
 def main() -> None:
-    EVENT_URL = "https://polymarket.com/event/fed-decision-in-january"
+    EVENT_URL = "https://polymarket.com/event/kodiak-fdv-above-one-day-after-launch/kodiak-fdv-above-50m-one-day-after-launch?tid=1766649532829"
     ev = resolve_event(EVENT_URL)
 
     # без миллисекунд и без +00:00

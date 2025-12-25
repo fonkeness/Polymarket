@@ -34,21 +34,23 @@ def iter_event_trades(
     limit: int = 1000,
     taker_only: bool = False,
     timeout_s: int = 30,
-) -> Iterator[Trade]:
+):
+    page_limit = min(int(limit), 500)  # API капает лимит до 500
+
     offset = 0
     while True:
         r = requests.get(
             f"{DATA_API_BASE}/trades",
             params={
                 "eventId": str(event_id),
-                "limit": limit,
+                "limit": page_limit,
                 "offset": offset,
                 "takerOnly": str(taker_only).lower(),
             },
             timeout=timeout_s,
         )
         r.raise_for_status()
-        batch: list[dict[str, Any]] = r.json()
+        batch = r.json()
         if not batch:
             break
 
@@ -70,5 +72,6 @@ def iter_event_trades(
             )
 
         offset += len(batch)
-        if len(batch) < limit:
+        if len(batch) < page_limit:
             break
+

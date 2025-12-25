@@ -42,7 +42,7 @@ async def handle_event_report_url(update: Update, context: ContextTypes.DEFAULT_
         await update.message.reply_text(f"Не похоже на event-ссылку. Ошибка: {e}")
         return
 
-    await update.message.reply_text("Ок, собираю отчёт...")
+    await update.message.reply_text("Ок, собираю отчёт... а пока можешь пососать мой хуй")
 
     try:
         as_of = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S")

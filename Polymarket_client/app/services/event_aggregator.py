@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Iterable, Tuple
+from typing import Callable, Dict, Iterable, Tuple
 
 from app.ingestion.event_resolver import EventMeta, MarketMeta
 from app.ingestion.trades_loader import Trade
@@ -74,7 +74,13 @@ class EventReportData:
     participants: Dict[Tuple[str, str, str], ParticipantTotals]  # (conditionId, wallet, outcome) -> totals
 
 
-def aggregate_event(event: EventMeta, trades: Iterable[Trade], as_of_utc: str) -> EventReportData:
+def aggregate_event(
+    event: EventMeta,
+    trades: Iterable[Trade],
+    as_of_utc: str,
+    progress_cb: Callable[[int], None] | None = None,
+    progress_every: int = 500,
+) -> EventReportData:
     market_by_cid: dict[str, MarketMeta] = {m.condition_id: m for m in event.markets}
 
     markets: dict[str, MarketTotals] = {}
@@ -83,6 +89,10 @@ def aggregate_event(event: EventMeta, trades: Iterable[Trade], as_of_utc: str) -
     all_traders: set[str] = set()
     total_trades = 0
     total_turnover = 0.0
+
+    # защитимся от странных значений
+    if progress_every <= 0:
+        progress_every = 500
 
     for tr in trades:
         cid = tr.condition_id
@@ -99,7 +109,9 @@ def aggregate_event(event: EventMeta, trades: Iterable[Trade], as_of_utc: str) -
             )
         mt = markets[cid]
 
-        usd = float(tr.size) * float(tr.price)
+        size = float(tr.size)
+        price = float(tr.price)
+        usd = size * price
         side = (tr.side or "").upper()
 
         mt.trades_count += 1
@@ -125,17 +137,17 @@ def aggregate_event(event: EventMeta, trades: Iterable[Trade], as_of_utc: str) -
             )
         pt = participants[key]
 
-        # заполняем имя/ник если раньше пусто
+        # обновляем имя/ник если раньше пусто
         if not pt.trader_name and tr.name:
             pt.trader_name = tr.name
         if not pt.trader_pseudonym and tr.pseudonym:
             pt.trader_pseudonym = tr.pseudonym
 
         if side == "BUY":
-            pt.buy_shares += float(tr.size)
+            pt.buy_shares += size
             pt.buy_usd += usd
         elif side == "SELL":
-            pt.sell_shares += float(tr.size)
+            pt.sell_shares += size
             pt.sell_usd += usd
 
         pt.trades_count += 1
@@ -148,6 +160,20 @@ def aggregate_event(event: EventMeta, trades: Iterable[Trade], as_of_utc: str) -
 
         total_trades += 1
         total_turnover += usd
+
+        if progress_cb and (total_trades % progress_every == 0):
+            try:
+                progress_cb(total_trades)
+            except Exception:
+                # прогресс не должен ломать агрегацию
+                pass
+
+    # финальный прогресс (чтобы на маленьких ивентах тоже показать итог)
+    if progress_cb:
+        try:
+            progress_cb(total_trades)
+        except Exception:
+            pass
 
     return EventReportData(
         event_id=event.event_id,

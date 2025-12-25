@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-import sys
 import asyncio
-from pathlib import Path
+import sys
 from datetime import datetime, timezone
+from pathlib import Path
+from typing import Callable, Optional, Tuple
 
 from telegram import Update
 from telegram.ext import ContextTypes
@@ -11,6 +12,7 @@ from telegram.ext import ContextTypes
 from tg_bot.services.db import is_authorized
 from tg_bot.handlers.menu.main_menu import build_main_menu
 
+# чтобы импортировать Polymarket_client/app/...
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 POLYMARKET_CLIENT_DIR = PROJECT_ROOT / "Polymarket_client"
 if str(POLYMARKET_CLIENT_DIR) not in sys.path:
@@ -22,14 +24,25 @@ from app.services.event_aggregator import aggregate_event
 from app.reporting.excel_exporter import export_event_report_xlsx
 
 
-def _build_report_file(event_url: str, user_id: int) -> tuple[Path, str, int, int]:
+def _build_report_file(
+    event_url: str,
+    user_id: int,
+    progress_cb: Optional[Callable[[int], None]],
+) -> Tuple[Path, str, int, int]:
+    """
+    Запускается в отдельном треде.
+    progress_cb вызывается каждые N сделок (настраивается в aggregate_event).
+    """
     ev = resolve_event(event_url)
 
     as_of = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+
     report = aggregate_event(
         ev,
         iter_event_trades(ev.event_id, limit=1000, taker_only=False),
         as_of_utc=as_of,
+        progress_cb=progress_cb,
+        progress_every=500,
     )
 
     out_dir = PROJECT_ROOT / "out"
@@ -53,16 +66,52 @@ async def handle_event_report_url(update: Update, context: ContextTypes.DEFAULT_
         await update.message.reply_text("Сначала /start и авторизация.")
         return
 
-    text = (update.message.text or "").strip()
+    event_url = (update.message.text or "").strip()
     context.user_data["waiting_for_event_url"] = False
 
-    await update.message.reply_text("Ок, собираю отчёт...")
+    status_msg = await update.message.reply_text("Собираю отчёт...")
+
+    chat_id = update.effective_chat.id
+    msg_id = status_msg.message_id
+    loop = asyncio.get_running_loop()
+
+    async def _edit_status(text: str):
+        try:
+            await context.bot.edit_message_text(
+                chat_id=chat_id,
+                message_id=msg_id,
+                text=text,
+            )
+        except Exception:
+            # игнорируем ошибки редактирования (например, слишком часто)
+            pass
+
+    last_shown = {"n": 0}
+
+    def progress_cb(n: int):
+        # Этот коллбек вызывается из треда.
+        if n <= last_shown["n"]:
+            return
+        last_shown["n"] = n
+        try:
+            asyncio.run_coroutine_threadsafe(
+                _edit_status(f"Обработано: {n} сделок..."),
+                loop,
+            )
+        except Exception:
+            pass
 
     out_path: Path | None = None
     try:
-        out_path, title, trades_cnt, traders_cnt = await asyncio.to_thread(_build_report_file, text, user_id)
+        # Генерим файл в отдельном треде (не блокируем event loop бота)
+        out_path, title, trades_cnt, traders_cnt = await asyncio.to_thread(
+            _build_report_file,
+            event_url,
+            user_id,
+            progress_cb,
+        )
 
-        await update.message.reply_text(f"Готово: trades={trades_cnt}, traders={traders_cnt}")
+        await _edit_status(f"Готово. trades={trades_cnt}, traders={traders_cnt}. Отправляю файл...")
 
         with open(out_path, "rb") as f:
             await update.message.reply_document(
@@ -71,10 +120,11 @@ async def handle_event_report_url(update: Update, context: ContextTypes.DEFAULT_
                 caption=title,
             )
 
+        await _edit_status("Отправлено.")
         await update.message.reply_text("Меню:", reply_markup=build_main_menu(user_id))
 
     except Exception as e:
-        await update.message.reply_text(f"Ошибка при генерации отчёта: {e}")
+        await _edit_status(f"Ошибка: {e}")
 
     finally:
         if out_path and out_path.exists():

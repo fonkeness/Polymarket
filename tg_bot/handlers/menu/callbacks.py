@@ -45,6 +45,18 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text += f"• `{uid}` — {role} — {ts}\n"
 
         await query.edit_message_text(text, parse_mode="Markdown")
+    elif action == "cancel_report":
+        # отмена генерации отчёта
+        task = context.user_data.get("report_task")
+        context.user_data["waiting_for_event_url"] = False
+
+        if task and not task.done():
+            task.cancel()
+
+        await query.edit_message_text("Ок, отменил.")
+        from tg_bot.handlers.menu.main_menu import build_main_menu
+        await query.message.reply_text("Меню:", reply_markup=build_main_menu(user_id))
+        return
 
     else:
         await query.edit_message_text("❓ Неизвестная команда.")

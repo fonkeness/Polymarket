@@ -35,7 +35,6 @@ def _build_report_sync(event_url_or_slug: str) -> tuple[str, str]:
     # ВАЖНО: передаём conditionId всех маркетов (fallback для огромных ивентов)
     trades = iter_event_trades(
         ev.event_id,
-        limit=500,                 # page size
         taker_only=False,
         market_condition_ids=[m.condition_id for m in ev.markets],
     )
